@@ -1,3 +1,8 @@
+// @title       Subscription API
+// @version     1.0.0
+// @description CRUDL service for user subscriptions
+// @host        localhost:8080
+
 package main
 
 import (
@@ -15,7 +20,11 @@ import (
 	"github.com/Neroframe/sub_crudl/internal/infra/postgres"
 	httpapi "github.com/Neroframe/sub_crudl/internal/interfaces/http"
 	"github.com/Neroframe/sub_crudl/pkg/logger"
+
+	_ "github.com/Neroframe/sub_crudl/docs"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -57,6 +66,8 @@ func main() {
 	// Gin setup
 	router := gin.Default()
 	httpapi.RegisterRoutes(router, h)
+	// Init swagger
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	addr := fmt.Sprintf("%s:%d", cfg.HTTP.Host, cfg.HTTP.Port)
 	srv := &http.Server{

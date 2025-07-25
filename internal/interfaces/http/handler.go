@@ -15,12 +15,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// Handler handles HTTP requests for subscriptions
-// @BasePath /
-// @Schemes http
-// @SecurityDefinitions.apikey ApiKeyAuth
-// @In header
-// @Name Authorization
+type ErrorResponse struct {
+	Error string `json:"error" example:"Invalid request"`
+}
+
+type AggregateResponse struct {
+	Total int `json:"total" example:"123"`
+}
+
 type Handler struct {
 	SubService app.SubscriptionService
 	log        *logger.Logger
@@ -31,16 +33,16 @@ func NewHandler(subService app.SubscriptionService, logger *logger.Logger) *Hand
 }
 
 // CreateSubscription godoc
-// @Summary Create a new subscription
+// @Summary     Create a new subscription
 // @Description Create subscription with service name, price, user ID, start and optional end date
-// @Tags subscriptions
-// @Accept json
-// @Produce json
-// @Param subscription body dto.CreateSubscriptionDTO true "Subscription data"
-// @Success 201 {object} app.SubscriptionService
-// @Failure 400 {object} map[string]string{"error": "message"}
-// @Failure 500 {object} map[string]string{"error": "message"}
-// @Router /subscriptions [post]
+// @Tags        subscriptions
+// @Accept      json
+// @Produce     json
+// @Param       subscription body dto.CreateSubscriptionDTO true "Subscription data"
+// @Success     201 {object} dto.SubscriptionDTO
+// @Failure     400 {object} httpapi.ErrorResponse
+// @Failure     500 {object} httpapi.ErrorResponse
+// @Router      /subscriptions [post]
 func (h *Handler) CreateSubscription(c *gin.Context) {
 	log := h.log.With("handler", "CreateSubscription")
 	log.Debug("parsing request")
@@ -104,15 +106,16 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 }
 
 // GetSubscription godoc
-// @Summary Get subscription by ID
+// @Summary     Get subscription by ID
 // @Description Retrieve subscription details by subscription ID
-// @Tags subscriptions
-// @Produce json
-// @Param id path string true "Subscription ID"
-// @Success 200 {object} app.SubscriptionService
-// @Failure 400 {object} map[string]string{"error": "message"}
-// @Failure 404 {object} map[string]string{"error": "message"}
-// @Router /subscriptions/{id} [get]
+// @Tags        subscriptions
+// @Produce     json
+// @Param       id path string true "Subscription ID"
+// @Success     200 {object} dto.SubscriptionDTO
+// @Failure     400 {object} httpapi.ErrorResponse
+// @Failure     404 {object} httpapi.ErrorResponse
+// @Failure     500 {object} httpapi.ErrorResponse
+// @Router      /subscriptions/{id} [get]
 func (h *Handler) GetSubscription(c *gin.Context) {
 	log := h.log.With("handler", "GetSubscription")
 
@@ -143,15 +146,15 @@ func (h *Handler) GetSubscription(c *gin.Context) {
 }
 
 // ListSubscriptions godoc
-// @Summary List subscriptions
+// @Summary     List subscriptions
 // @Description Get all subscriptions, optionally filter by user_id and service_name
-// @Tags subscriptions
-// @Produce json
-// @Param user_id query string false "User ID"
-// @Param service_name query string false "Service Name"
-// @Success 200 {array} app.SubscriptionService
-// @Failure 500 {object} map[string]string{"error": "message"}
-// @Router /subscriptions [get]
+// @Tags        subscriptions
+// @Produce     json
+// @Param       user_id      query string false "User ID"
+// @Param       service_name query string false "Service Name"
+// @Success     200 {array}  dto.SubscriptionDTO
+// @Failure     500 {object} httpapi.ErrorResponse
+// @Router      /subscriptions [get]
 func (h *Handler) ListSubscriptions(c *gin.Context) {
 	log := h.log.With("handler", "ListSubscriptions")
 
@@ -187,17 +190,17 @@ func (h *Handler) ListSubscriptions(c *gin.Context) {
 }
 
 // UpdateSubscription godoc
-// @Summary Update a subscription
+// @Summary     Update a subscription
 // @Description Update subscription fields by ID
-// @Tags subscriptions
-// @Accept json
-// @Produce json
-// @Param id path string true "Subscription ID"
-// @Param subscription body dto.UpdateSubscriptionDTO true "Updated subscription data"
-// @Success 200 {object} app.SubscriptionService
-// @Failure 400 {object} map[string]string{"error": "message"}
-// @Failure 500 {object} map[string]string{"error": "message"}
-// @Router /subscriptions/{id} [put]
+// @Tags        subscriptions
+// @Accept      json
+// @Produce     json
+// @Param       id           path string               true  "Subscription ID"
+// @Param       subscription body dto.UpdateSubscriptionDTO true "Updated subscription data"
+// @Success     200 {object} dto.SubscriptionDTO
+// @Failure     400 {object} httpapi.ErrorResponse
+// @Failure     500 {object} httpapi.ErrorResponse
+// @Router      /subscriptions/{id} [put]
 func (h *Handler) UpdateSubscription(c *gin.Context) {
 	log := h.log.With("handler", "UpdateSubscription")
 	idStr := c.Param("id")
@@ -264,15 +267,14 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 }
 
 // DeleteSubscription godoc
-// @Summary Delete a subscription
+// @Summary     Delete a subscription
 // @Description Delete subscription by ID
-// @Tags subscriptions
-// @Produce json
-// @Param id path string true "Subscription ID"
-// @Success 204 {object} nil
-// @Failure 400 {object} map[string]string{"error": "message"}
-// @Failure 500 {object} map[string]string{"error": "message"}
-// @Router /subscriptions/{id} [delete]
+// @Tags        subscriptions
+// @Param       id   path   string true "Subscription ID"
+// @Success     204 {object} nil
+// @Failure     400 {object} httpapi.ErrorResponse
+// @Failure     500 {object} httpapi.ErrorResponse
+// @Router      /subscriptions/{id} [delete]
 func (h *Handler) DeleteSubscription(c *gin.Context) {
 	log := h.log.With("handler", "DeleteSubscription")
 	idStr := c.Param("id")
@@ -296,18 +298,18 @@ func (h *Handler) DeleteSubscription(c *gin.Context) {
 }
 
 // AggregateSubscriptions godoc
-// @Summary Aggregate subscription costs
+// @Summary     Aggregate subscription costs
 // @Description Calculate total cost over period with optional filters
-// @Tags subscriptions
-// @Produce json
-// @Param user_id query string false "User ID"
-// @Param service_name query string false "Service Name"
-// @Param start_period query string true "Start period (MM-YYYY)"
-// @Param end_period query string true "End period (MM-YYYY)"
-// @Success 200 {object} map[string]int{"total": 123}
-// @Failure 400 {object} map[string]string{"error": "message"}
-// @Failure 500 {object} map[string]string{"error": "message"}
-// @Router /subscriptions/aggregate [get]
+// @Tags        subscriptions
+// @Produce     json
+// @Param       user_id      query string false "User ID"
+// @Param       service_name query string false "Service Name"
+// @Param       start_period query string true  "Start period (MM-YYYY)"
+// @Param       end_period   query string true  "End period (MM-YYYY)"
+// @Success     200 {object} httpapi.AggregateResponse
+// @Failure     400 {object} httpapi.ErrorResponse
+// @Failure     500 {object} httpapi.ErrorResponse
+// @Router      /subscriptions/aggregate [get]
 func (h *Handler) AggregateSubscriptions(c *gin.Context) {
 	log := h.log.With("handler", "AggregateSubscriptions")
 
