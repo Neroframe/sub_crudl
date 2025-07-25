@@ -1,4 +1,4 @@
-package http
+package httpapi
 
 import "github.com/gin-gonic/gin"
 
@@ -12,5 +12,5 @@ func RegisterRoutes(r *gin.Engine, h *Handler) {
 		api.DELETE("/:id", h.DeleteSubscription)
 	}
 
-	r.Get("/subscriptions/aggregate", h.AggregateSubscriptions)
+	r.GET("/subscriptions/aggregate", h.AggregateSubscriptions)
 }
