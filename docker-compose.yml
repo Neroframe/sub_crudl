@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   subscription_db:
     image: postgres:13-alpine
@@ -10,17 +12,36 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate
+    depends_on:
+      subscription_db:
+        condition: service_healthy
+    volumes:
+      - ./db/migrations:/migrations
+    command:
+      [
+        "-path", "/migrations",
+        "-database", "postgres://postgres:postgres@subscription_db:5432/subscriptions?sslmode=disable",
+        "-lock-timeout", "15",
+        "up"
+      ]
 
   api:
-    image: golang:1.23-alpine
-    working_dir: /app
-    volumes:
-      - ./:/app
+    build:
+      context: .
+      dockerfile: Dockerfile
     depends_on:
-      - subscription_db
+      subscription_db:
+        condition: service_healthy
     ports:
       - "8080:8080"
-    command: go run cmd/api/main.go
 
 volumes:
   db_data:

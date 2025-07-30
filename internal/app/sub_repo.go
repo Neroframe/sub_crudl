@@ -2,18 +2,13 @@ package app
 
 import (
 	"context"
-	"time"
 
+	appdto "github.com/Neroframe/sub_crudl/internal/app/dto"
 	"github.com/Neroframe/sub_crudl/internal/domain"
 	"github.com/google/uuid"
 )
 
-type AggregationFilter struct {
-	UserID      *uuid.UUID
-	ServiceName *string
-	StartPeriod time.Time
-	EndPeriod   time.Time
-}
+
 
 type SubscriptionRepository interface {
 	Create(ctx context.Context, sub *domain.Subscription) error
@@ -22,5 +17,5 @@ type SubscriptionRepository interface {
 	Update(ctx context.Context, sub *domain.Subscription) error
 	Delete(ctx context.Context, id uuid.UUID) error
 
-	AggregateCost(ctx context.Context, f AggregationFilter) (int32, error)
+	AggregateCost(ctx context.Context, f appdto.AggregationFilter) (int32, error)
 }

@@ -5,26 +5,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Neroframe/sub_crudl/internal/app"
+	appdto "github.com/Neroframe/sub_crudl/internal/app/dto"
 	"github.com/Neroframe/sub_crudl/internal/domain"
 	"github.com/Neroframe/sub_crudl/pkg/logger"
 	"github.com/google/uuid"
-
 	"github.com/jmoiron/sqlx"
 )
-
-type dbSub struct {
-	ID          uuid.UUID  `db:"id"`
-	ServiceName string     `db:"service_name"`
-	Price       int32      `db:"price"`
-	UserID      uuid.UUID  `db:"user_id"`
-	StartDate   time.Time  `db:"start_date"`
-	EndDate     *time.Time `db:"end_date"`
-}
 
 type repo struct {
 	db  *sqlx.DB
@@ -40,25 +29,16 @@ func (r *repo) Create(ctx context.Context, sub *domain.Subscription) error {
 	log.Debug("inserting subscription", "id", sub.ID)
 
 	query := `INSERT INTO subscriptions (id, service_name, price, user_id, start_date, end_date)
-				VALUES (:id, :service_name, :price, :user_id, :start_date, :end_date)`
+	          VALUES (:id, :service_name, :price, :user_id, :start_date, :end_date)`
 
-	args := dbSub{
-		ID:          sub.ID,
-		ServiceName: sub.ServiceName,
-		Price:       sub.Price,
-		UserID:      sub.UserID,
-		StartDate:   sub.StartDate,
-		EndDate:     sub.EndDate,
-	}
-
-	_, err := r.db.NamedExecContext(ctx, query, args)
+	_, err := r.db.NamedExecContext(ctx, query, sub)
 	if err != nil {
 		log.Error("failed to insert subscription", "error", err)
 		return fmt.Errorf("repo.Create: %w", err)
 	}
 
 	log.Info("subscription inserted", "id", sub.ID)
-	return err
+	return nil
 }
 
 func (r *repo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Subscription, error) {
@@ -91,15 +71,13 @@ func (r *repo) List(ctx context.Context, userID *uuid.UUID, serviceName *string)
 	var conditions []string
 
 	if userID != nil {
-		conditions = append(conditions, "user_id=$"+strconv.Itoa(len(args)+1))
 		args = append(args, *userID)
+		conditions = append(conditions, fmt.Sprintf("user_id = $%d", len(args)))
 	}
-
 	if serviceName != nil {
-		conditions = append(conditions, "service_name ILIKE $"+strconv.Itoa(len(args)+1))
 		args = append(args, "%"+*serviceName+"%")
+		conditions = append(conditions, fmt.Sprintf("service_name ILIKE $%d", len(args)))
 	}
-
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -119,21 +97,14 @@ func (r *repo) Update(ctx context.Context, sub *domain.Subscription) error {
 	log.Debug("updating subscription", "id", sub.ID)
 
 	query := `UPDATE subscriptions
-				SET service_name = :service_name,
-					price = :price,
-					start_date = :start_date,
-					end_date = :end_date,
-				WHERE id=:id;`
+	          SET service_name = :service_name,
+	              price = :price,
+	              start_date = :start_date,
+	              end_date = :end_date
+	          WHERE id = :id`
 
-	args := dbSub{
-		ID:          sub.ID,
-		ServiceName: sub.ServiceName,
-		Price:       sub.Price,
-		StartDate:   sub.StartDate,
-		EndDate:     sub.EndDate,
-	}
-
-	if _, err := r.db.NamedExecContext(ctx, query, args); err != nil {
+	_, err := r.db.NamedExecContext(ctx, query, sub)
+	if err != nil {
 		log.Error("failed to update subscription", "id", sub.ID, "error", err)
 		return fmt.Errorf("repo.Update: %w", err)
 	}
@@ -156,36 +127,33 @@ func (r *repo) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// AggregateCost returns the sum of Price for all subscriptions
-// in the given period and matching filters
-func (r *repo) AggregateCost(ctx context.Context, f app.AggregationFilter) (int32, error) {
+func (r *repo) AggregateCost(ctx context.Context, f appdto.AggregationFilter) (int32, error) {
 	log := r.log.With("repo", "AggregateCost")
 	log.Debug("aggregating subscription cost", "filter", f)
 
-	query := `SELECT COALESCE(SUM(price), 0) FROM subscriptions` // ensure returns 0 if no match
+	query := `SELECT COALESCE(SUM(price), 0) FROM subscriptions`
 	var args []interface{}
 	var conditions []string
 
 	if f.UserID != nil {
-		conditions = append(conditions, "user_id = $"+strconv.Itoa(len(args)+1))
 		args = append(args, *f.UserID)
+		conditions = append(conditions, fmt.Sprintf("user_id = $%d", len(args)))
 	}
 	if f.ServiceName != nil {
-		conditions = append(conditions, "service_name = $"+strconv.Itoa(len(args)+1))
 		args = append(args, *f.ServiceName)
+		conditions = append(conditions, fmt.Sprintf("service_name = $%d", len(args)))
 	}
-	conditions = append(conditions, "start_date >= $"+strconv.Itoa(len(args)+1))
-	args = append(args, f.StartPeriod)
-	conditions = append(conditions, "start_date <= $"+strconv.Itoa(len(args)+1))
 	args = append(args, f.EndPeriod)
+	conditions = append(conditions, fmt.Sprintf("start_date <= $%d", len(args)))
+	args = append(args, f.StartPeriod)
+	conditions = append(conditions, fmt.Sprintf("(end_date IS NULL OR end_date >= $%d)", len(args)))
 
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 
 	var sum int32
-	err := r.db.GetContext(ctx, &sum, query, args...)
-	if err != nil {
+	if err := r.db.GetContext(ctx, &sum, query, args...); err != nil {
 		log.Error("failed to aggregate subscription cost", "error", err)
 		return 0, fmt.Errorf("repo.AggregateCost: %w", err)
 	}

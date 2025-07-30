@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Neroframe/sub_crudl/internal/app"
+	appdto "github.com/Neroframe/sub_crudl/internal/app/dto"
 	"github.com/Neroframe/sub_crudl/internal/interfaces/http/dto"
 	"github.com/Neroframe/sub_crudl/pkg/logger"
 	"github.com/gin-gonic/gin"
@@ -87,11 +88,12 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 		endDate = &t
 	}
 
-	input := app.CreateInput{
+	input := appdto.CreateInput{
 		ServiceName: req.ServiceName,
 		UserID:      userID,
 		StartDate:   startDate,
 		EndDate:     endDate,
+		Price:       req.Price,
 	}
 
 	sub, err := h.SubService.Create(c.Request.Context(), input)
@@ -248,7 +250,7 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 		endDate = &t
 	}
 
-	input := app.UpdateInput{
+	input := appdto.UpdateInput{
 		ServiceName: req.ServiceName,
 		StartDate:   startDate,
 		EndDate:     endDate,
@@ -349,7 +351,7 @@ func (h *Handler) AggregateSubscriptions(c *gin.Context) {
 		return
 	}
 
-	filter := app.AggregationFilter{
+	filter := appdto.AggregationFilter{
 		UserID:      userID,
 		ServiceName: serviceName,
 		StartPeriod: start,

@@ -4,27 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
+	appdto "github.com/Neroframe/sub_crudl/internal/app/dto"
 	"github.com/Neroframe/sub_crudl/internal/domain"
 	"github.com/Neroframe/sub_crudl/pkg/logger"
 	"github.com/google/uuid"
 )
 
-type CreateInput struct {
-	ServiceName string
-	UserID      uuid.UUID
-	StartDate   time.Time
-	EndDate     *time.Time
-	Price       int32
-}
-
-type UpdateInput struct {
-	ServiceName *string
-	StartDate   *time.Time
-	EndDate     *time.Time
-	Price       *int32
-}
 
 type service struct {
 	repo SubscriptionRepository
@@ -40,7 +26,7 @@ var (
 	ErrInvalidInput = errors.New("invalid input")
 )
 
-func (s *service) Create(ctx context.Context, input CreateInput) (*domain.Subscription, error) {
+func (s *service) Create(ctx context.Context, input appdto.CreateInput) (*domain.Subscription, error) {
 	log := s.log.With("service", "Create")
 	log.Debug("creating subscription", "input", input)
 
@@ -108,7 +94,7 @@ func (s *service) List(ctx context.Context, userID *uuid.UUID, serviceName *stri
 	return subs, nil
 }
 
-func (s *service) Update(ctx context.Context, id uuid.UUID, input UpdateInput) (*domain.Subscription, error) {
+func (s *service) Update(ctx context.Context, id uuid.UUID, input appdto.UpdateInput) (*domain.Subscription, error) {
 	log := s.log.With("service", "Update", "id", id)
 	log.Debug("updating subscription", "input", input)
 
@@ -170,7 +156,7 @@ func (s *service) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (s *service) Aggregate(ctx context.Context, filter AggregationFilter) (int32, error) {
+func (s *service) Aggregate(ctx context.Context, filter appdto.AggregationFilter) (int32, error) {
 	log := s.log.With("service", "Aggregate", "filter", filter)
 	log.Debug("aggregating subscriptions")
 
