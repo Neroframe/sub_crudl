@@ -59,7 +59,8 @@ func main() {
 	defer db.Close()
 
 	// Wire layers
-	repo := postgres.NewSubscriptionRepo(db, log)
+	// repo := postgres.NewSubscriptionRepo(db, log)
+	repo := postgres.NewSubscriptionRepo(db.DB)
 	service := app.NewSubscriptionService(repo, log)
 	h := httpapi.NewHandler(service, log)
 

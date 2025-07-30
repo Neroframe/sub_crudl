@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   subscription_db:
@@ -24,13 +24,16 @@ services:
       subscription_db:
         condition: service_healthy
     volumes:
-      - ./db/migrations:/migrations
+      - ./internal/infra/postgres/migration:/migrations
     command:
       [
-        "-path", "/migrations",
-        "-database", "postgres://postgres:postgres@subscription_db:5432/subscriptions?sslmode=disable",
-        "-lock-timeout", "15",
-        "up"
+        "-path",
+        "/migrations",
+        "-database",
+        "postgres://postgres:postgres@subscription_db:5432/subscriptions?sslmode=disable",
+        "-lock-timeout",
+        "15",
+        "up",
       ]
 
   api:
